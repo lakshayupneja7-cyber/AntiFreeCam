@@ -1,62 +1,47 @@
 package me.lakshay;
 
 import org.bukkit.Bukkit;
-import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.util.HashMap;
-import java.util.UUID;
-
 public final class AntiFreeCam extends JavaPlugin implements Listener {
-
-    private final HashMap<UUID, Location> lastLocation = new HashMap<>();
-    private final HashMap<UUID, Long> lastMoveTime = new HashMap<>();
 
     @Override
     public void onEnable() {
         getServer().getPluginManager().registerEvents(this, this);
         getLogger().info("AntiFreeCam Enabled!");
+
+        // Constant check task
+        Bukkit.getScheduler().runTaskTimer(this, () -> {
+            for (Player player : Bukkit.getOnlinePlayers()) {
+
+                if (player.isFlying() && !player.hasPermission("antifreecam.bypass")) {
+                    player.kickPlayer("§cFreeCam Detected!\n§7Please remove FreeCam and rejoin.");
+                }
+
+            }
+        }, 0L, 40L); // every 2 seconds
     }
 
     @EventHandler
-    public void onPlayerMove(PlayerMoveEvent event) {
-
+    public void onMove(PlayerMoveEvent event) {
         Player player = event.getPlayer();
-        UUID uuid = player.getUniqueId();
 
-        Location from = event.getFrom();
-        Location to = event.getTo();
+        // Ignore pure head rotation (mouse movement)
+        if (event.getFrom().getX() == event.getTo().getX() &&
+            event.getFrom().getY() == event.getTo().getY() &&
+            event.getFrom().getZ() == event.getTo().getZ()) {
+            return;
+        }
 
-        if (to == null) return;
+        // Check abnormal teleport distance
+        double distance = event.getFrom().distance(event.getTo());
 
-        // Check if player position changed
-        boolean movedPosition = from.getX() != to.getX()
-                || from.getY() != to.getY()
-                || from.getZ() != to.getZ();
-
-        // Check if player rotated only
-        boolean rotated = from.getYaw() != to.getYaw()
-                || from.getPitch() != to.getPitch();
-
-        if (!movedPosition && rotated) {
-            long currentTime = System.currentTimeMillis();
-
-            if (!lastMoveTime.containsKey(uuid)) {
-                lastMoveTime.put(uuid, currentTime);
-            } else {
-                long diff = currentTime - lastMoveTime.get(uuid);
-
-                // 5 seconds rotating without moving
-                if (diff > 5000) {
-                    player.kickPlayer("FreeCam Detected!");
-                }
-            }
-        } else if (movedPosition) {
-            lastMoveTime.remove(uuid);
+        if (distance > 8 && !player.hasPermission("antifreecam.bypass")) {
+            player.kickPlayer("§cFreeCam Detected!\n§7Please remove FreeCam and rejoin.");
         }
     }
 }
