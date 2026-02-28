@@ -1,0 +1,6 @@
+name: AntiFreeCam
+version: 1.0
+main: me.lakshay.AntiFreeCam
+api-version: 1.21
+author: Lakshay
+description: Anti FreeCam detection plugin
